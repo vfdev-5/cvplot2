@@ -8,12 +8,16 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
+
 #ifdef HAS_QT4
 #include <QApplication>
 #endif
 
 // Project
 #include "cvplot.h"
+#ifdef HAS_QT4
+#include "cvplot_qt4.h"
+#endif
 
 const int DATA_LENGTH=512;
 

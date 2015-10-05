@@ -8,8 +8,7 @@ link_directories(${OpenCV_LIB_DIR})
 link_libraries(${OpenCV_LIBS})
 
 ## include & link to Qt if defined:
-if(QT4_FOUND)
-    message(STATUS "Has Qt4")
+if(WITH_QT)
     include(${QT_USE_FILE})
     link_libraries(${QT_LIBRARIES})
     add_definitions( -DHAS_QT4 )

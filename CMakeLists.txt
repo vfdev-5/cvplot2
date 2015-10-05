@@ -3,12 +3,19 @@
 project( cvplot_project )
 cmake_minimum_required( VERSION 2.6 )
 
+if(NOT DEFINED WITH_QT)
+set (WITH_QT ON)
+endif()
+
 # Find OpenCV:
 find_package( OpenCV REQUIRED )
 
 # Find Qt4
-set(QTDIR $ENV{QT_DIR})
-find_package( Qt4 )
+if (WITH_QT)
+    message(STATUS "With Qt4")
+    set(QTDIR $ENV{QT_DIR})
+    find_package( Qt4 )
+endif(WITH_QT)
 
 # add library :
 add_subdirectory("Library")
