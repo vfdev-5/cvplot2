@@ -9,6 +9,7 @@ endif()
 
 # Find OpenCV:
 find_package( OpenCV REQUIRED )
+message("Found Opencv: ${OpenCV_VERSION}")
 
 # Find Qt4
 if (WITH_QT)
@@ -21,6 +22,9 @@ endif(WITH_QT)
 add_subdirectory("Library")
 # add demo application :
 add_subdirectory("Demo")
+# add tests
+add_subdirectory("Tests")
+
 
 # install opencv library dlls :
 if(WIN32)

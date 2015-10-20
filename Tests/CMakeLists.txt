@@ -1,5 +1,5 @@
 
-project( demo )
+project( tests )
 
 file(GLOB SRC_FILES "*.cpp")
 
@@ -24,5 +24,3 @@ link_libraries("cvplot")
 add_executable( ${PROJECT_NAME} ${SRC_FILES} )
 set_target_properties(${PROJECT_NAME} PROPERTIES DEBUG_POSTFIX ".d")
 
-## install application
-install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin ARCHIVE DESTINATION lib LIBRARY DESTINATION lib)

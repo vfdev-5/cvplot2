@@ -27,72 +27,72 @@ PlotManager pm;
 
 }
 
+void printMat(const cv::Mat & m, const std::string & name, int userWidth=0, int userHeight=0)
+{
+    std::cout << "Print matrix : " << name << std::endl;
+    std::cout << "Size : " << m.cols << ", " << m.rows << std::endl;
+    std::cout << "Nb of Bands : " << m.channels() << std::endl;
+
+    if (m.channels() > 1)
+        return;
+
+    cv::Mat d;
+    m.convertTo(d, CV_32F);
+
+    if (userHeight==0) userHeight = m.rows;
+    if (userWidth==0) userWidth = m.cols;
+
+    for (int i=0;i<userHeight;i++)
+    {
+        std::cout << "Row " << i << " : ";
+        for (int j=0;j<userWidth;j++)
+        {
+            std::cout << d.at<float>(i,j) << " ";
+        }
+        std::cout << std::endl;
+    }
+}
+
+
 //*************************************************************************************************
 //****************************** Class Series *****************************************************
 //*************************************************************************************************
 
 /// Constructor of class Series
 Series::Series(void) :
-    data(0)
+    color(CV_BLACK),
+    auto_color(true)
 {
-    Clear();
 }
 
 //*************************************************************************************************
 /// Constructor of class Series
-Series::Series(int n, FLOAT *p)
+/// data is a [1 x Width] matrix
+/// count is between 1 and Width
+Series::Series(const cv::Mat &data, int count) :
+    color(CV_BLACK),
+    auto_color(true)
 {
-    color = CV_BLACK;
-    auto_color = true;
-    label = "";
-
-    count = n;
-    data = new FLOAT[count];
-    std::memcpy(data, p, count * sizeof(FLOAT));
+    // copy data
+    if (data.cols == 1)
+    {
+        data.rowRange(0,count).convertTo(this->data, CV_32F);
+        this->data = this->data.t();
+    }
+    else
+    {
+        data.colRange(0,count).convertTo(this->data, CV_32F);
+    }
 }
 
 //*************************************************************************************************
 /// Constructor of class Series
 Series::Series(const Series& s) :
-    count(s.count),
     label(s.label),
     auto_color(s.auto_color),
     color(s.color)
 {
-    data = new FLOAT[count];
-    std::memcpy(data, s.data, count * sizeof(FLOAT));
-}
-
-//*************************************************************************************************
-/// Destructor of class Series
-Series::~Series(void)
-{
-    Clear();
-}
-
-//*************************************************************************************************
-/// Method : clear all data and info
-void Series::Clear(void)
-{
-    if (data)
-    {
-        delete data;
-        data=0;
-    }
-
-    count = 0;
-    color = CV_BLACK;
-    auto_color = true;
-    label = "";
-}
-
-//*************************************************************************************************
-/// Method : set data 
-void Series::SetData(int n, FLOAT *p)
-{
-    Clear();
-    count = n;
-    data = p;
+    s.data.copyTo(this->data);
 }
 
 //*************************************************************************************************
@@ -148,7 +148,7 @@ std::string Figure::GetFigureName(void) const
 }
 
 //*************************************************************************************************
-/// Method to add a serie
+// Method to add a serie
 Series* Figure::Add(Series *s)
 {
     plots.push_back(s);
@@ -185,29 +185,25 @@ void Figure::Initialize()
     if (figure_size.height <= border_size * 2 + 200)
         figure_size.height = border_size * 2 + 200;
 
-    y_max = FLOAT_MIN;
-    y_min = FLOAT_MAX;
+    y_max = 0.0;
+    y_min = 0.0;
 
-    x_max = 0;
-    x_min = 0;
+    x_max = 0.0;
+    x_min = 0.0;
 
     // find maximum/minimum of axes
     for (std::vector<Series*>::iterator iter = plots.begin();
          iter != plots.end();
          iter++)
     {
-        FLOAT *p = (*iter)->data;
-        for (int i=0; i < (*iter)->count; i++)
-        {
-            FLOAT v = p[i];
-            if (v < y_min)
-                y_min = v;
-            if (v > y_max)
-                y_max = v;
-        }
+        double ymin, ymax;
+        cv::minMaxLoc((*iter)->data, &ymin, &ymax);
 
-        if (x_max < (*iter)->count)
-            x_max = (*iter)->count;
+        if (ymin < y_min) y_min = ymin;
+        if (ymax > y_max) y_max = ymax;
+
+        if (x_max < (*iter)->data.cols)
+            x_max = (*iter)->data.cols;
     }
 
     // calculate zoom scale
@@ -229,7 +225,7 @@ void Figure::Initialize()
 }
 
 /// Method to initialize a figure
-cv::Scalar Figure::GetAutoColor() const 
+cv::Scalar Figure::GetAutoColor()
 {
     // 	change color for each curve.
     cv::Scalar col;
@@ -265,9 +261,8 @@ cv::Scalar Figure::GetAutoColor() const
         break;
     default:
         col =  CV_RGB(200,200,200);	// grey
-        //color_index = 0;
     }
-    //color_index++;
+    color_index++;
     return col;
 }
 
@@ -299,8 +294,6 @@ void Figure::DrawAxis(cv::Mat &output)
     double fontScale=0.55;
     int thickness=1;
     int linetype=CV_AA;
-
-    //cvInitFont(&font,CV_FONT_HERSHEY_PLAIN,0.55,0.7, 0,1,CV_AA);
 
     int chw = 6, chh = 10;
     char text[1000];
@@ -346,19 +339,18 @@ void Figure::DrawPlots(cv::Mat &output)
          iter != plots.end();
          iter++)
     {
-        FLOAT *p = (*iter)->data;
+        cv::Mat data = (*iter)->data;
 
         // automatically change curve color
         if ((*iter)->auto_color == true)
             (*iter)->SetColor(GetAutoColor());
 
         cv::Point prev_point;
-        for (int i=0; i<(*iter)->count; i++)
+        for (int i=0; i<data.cols; i++)
         {
-            int y = cvRound(( p[i] - y_min) * y_scale);
+            int y = cvRound(( data.at<FLOAT>(0,i) - y_min) * y_scale);
             int x = cvRound((   i  - x_min) * x_scale);
             cv::Point next_point = cv::Point(bs + x, h - (bs + y));
-            //cvCircle(output, next_point, 1, (*iter)->color, 1);
             cv::ellipse(output, next_point, cv::Size(1,1), 0.0, 0.0, 360.0, (*iter)->color, 1);
 
             // draw a line between two points
@@ -413,7 +405,7 @@ void Figure::Show()
 {
     Initialize();
 
-    cv::Mat output = cv::Mat(figure_size, CV_8UC3, backgroud_color); // cvCreateImage(figure_size, IPL_DEPTH_8U, 3); cvSet(output, backgroud_color, 0);
+    cv::Mat output = cv::Mat(figure_size, CV_8UC3, backgroud_color);
 
     DrawAxis(output);
 
@@ -421,10 +413,8 @@ void Figure::Show()
 
     DrawLabels(output, figure_size.width - 100, 10);
 
-    //cvShowImage(figure_name.c_str(), output);
     cv::imshow(figure_name.c_str(), output);
     cv::waitKey(1);
-    //cvReleaseImage(&output);
 
 }
 
@@ -446,51 +436,17 @@ Figure* PlotManager::FindFigure(const std::string & wnd)
 }
 
 //*************************************************************************************************
-// plot a new curve, if a figure of the specified figure name already exists,
-// the curve will be plot on that figure; if not, a new figure will be created.
-void PlotManager::Plot(const std::string & figure_name, const FLOAT *p, int count, int step, int R, int G, int B)
+
+void PlotManager::Plot(const std::string & figure_name, const cv::Mat & data, int count, int R, int G, int B)
 {
     if (count < 1)
-        return;
-
-    if (step <= 0)
-        step = 1;
-
-    // copy data and create a series format.
-    FLOAT *data_copy = new FLOAT[count];
-
-    for (int i = 0; i < count; i++)
-        *(data_copy + i) = *(p + step * i);
-
-    Series *s = new Series(count, data_copy);
-
-    if ((R > 0) || (G > 0) || (B > 0))
-        s->SetColor(R, G, B, false);
-
-    // search the named window and create one if none was found
-    active_figure = FindFigure(figure_name);
-    if ( active_figure == 0)
     {
-        Figure * new_figure = new Figure(figure_name);
-        figure_list.push_back(new_figure);
-        active_figure = new_figure;
+        WARN("PlotManager::Plot : count is less than one");
+        return;
     }
 
-    active_series = active_figure->Add(s);
-    active_figure->Show();
-
-}
-
-//*************************************************************************************************
-
-void PlotManager::Plot(const std::string & figure_name, cv::Mat & dataInFloat, int count, int R, int G, int B)
-{
-    if (count < 1)
-        return;
-
-    FLOAT *data = reinterpret_cast<FLOAT*>(dataInFloat.data);
     // Data is copied while Series is created:
-    Series *s = new Series(count, data);
+    Series *s = new Series(data, count);
 
     if ((R > 0) || (G > 0) || (B > 0))
         s->SetColor(R, G, B, false);
@@ -546,13 +502,7 @@ void plot(const std::string & figure_name, const cv::Mat & oneDimData, int count
         count = oneDimData.rows > 1 ? oneDimData.rows : oneDimData.cols;
     }
 
-    cv::Mat dataInFloat;
-    if (oneDimData.type() != OCV_FLOAT_TYPE)
-        oneDimData.convertTo(dataInFloat, OCV_FLOAT_TYPE);
-    else
-        dataInFloat = oneDimData;
-
-    pm.Plot(figure_name, dataInFloat, count, R, G, B);
+    pm.Plot(figure_name, oneDimData, count, R, G, B);
 }
 
 //*************************************************************************************************

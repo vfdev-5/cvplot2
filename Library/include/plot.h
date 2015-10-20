@@ -41,9 +41,8 @@ typedef float FLOAT;
 // A curve.
 struct Series
 {
-    // number of points
-    unsigned int count;
-    FLOAT *data;
+    // data
+    cv::Mat data;
     // name of the curve
     std::string label;
 
@@ -52,14 +51,8 @@ struct Series
     cv::Scalar color;
 
     Series(void);
-    Series(int n, FLOAT * p);
+    Series(const cv::Mat & data, int count);
     Series(const Series& s);
-    ~Series(void);
-
-    // release memory
-    void Clear();
-
-    void SetData(int n, FLOAT *p);
 
     void SetColor(cv::Scalar color, bool auto_color = true);
     void SetColor(int R, int G, int B, bool auto_color = true);
@@ -74,6 +67,7 @@ public:
 
     std::string GetFigureName() const ;
     Series* Add(Series *s);
+
     void Clear();
     void DrawLabels(cv::Mat & output, int posx, int posy);
 
@@ -88,7 +82,7 @@ protected:
 
     // call before plot
     void Initialize();
-    cv::Scalar GetAutoColor() const;
+    cv::Scalar GetAutoColor();
     // window name
     std::string figure_name;
     cv::Size figure_size;
@@ -129,10 +123,7 @@ public:
 
     Figure* FindFigure(const std::string &wnd);
 
-    void Plot(const std::string &figure_name, const FLOAT* p, int count, int step,
-              int R, int G, int B);
-
-    void Plot(const std::string &figure_name, cv::Mat & dataInFloat, int count,
+    void Plot(const std::string &figure_name, const cv::Mat & data, int count,
               int R, int G, int B);
 
     void Label(const std::string &lbl);

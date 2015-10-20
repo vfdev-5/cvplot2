@@ -53,20 +53,19 @@ QWidget * FigureQt4::GetWidget()
 class PlotManagerQt4 : public PlotManager
 {
 public:
-    QWidget * GetPlotWidget(const std::string &figure_name, cv::Mat & dataInFloat, int count, int R, int G, int B);
+    QWidget * GetPlotWidget(const std::string &figure_name, const cv::Mat & data, int count, int R, int G, int B);
 };
 
 //*************************************************************************************************
 /*! get plot Qt widget
  */
-QWidget * PlotManagerQt4::GetPlotWidget(const std::string &figure_name, cv::Mat &dataInFloat, int count, int R, int G, int B)
+QWidget * PlotManagerQt4::GetPlotWidget(const std::string &figure_name, const cv::Mat &data, int count, int R, int G, int B)
 {
     if (count < 1)
         return 0;
 
-    FLOAT *data = reinterpret_cast<FLOAT*>(dataInFloat.data);
     // Data is copied while Series is created:
-    Series *s = new Series(count, data);
+    Series *s = new Series(data, count);
 
     if ((R > 0) || (G > 0) || (B > 0))
         s->SetColor(R, G, B, false);
@@ -124,13 +123,7 @@ QWidget* getPlotWidget(const std::string & figure_name, const cv::Mat & oneDimDa
         count = oneDimData.rows > 1 ? oneDimData.rows : oneDimData.cols;
     }
 
-    cv::Mat dataInFloat;
-    if (oneDimData.type() != OCV_FLOAT_TYPE)
-        oneDimData.convertTo(dataInFloat, OCV_FLOAT_TYPE);
-    else
-        dataInFloat = oneDimData;
-
-    return pm.GetPlotWidget(figure_name, dataInFloat, count, R, G, B);
+    return pm.GetPlotWidget(figure_name, oneDimData, count, R, G, B);
 }
 
 //*************************************************************************************************
